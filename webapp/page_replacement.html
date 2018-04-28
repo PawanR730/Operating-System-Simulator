@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>OS Simulator</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width; initial-scale=1; maximum-scale=1">
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<script
+	src="https://code.jquery.com/jquery-3.1.1.min.js"
+	integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
+	crossorigin="anonymous"></script>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/css/materialize.min.css">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto Mono">
+	<style>
+ 
+		body {
+			margin: 0;
+			padding: 0;
+			background: rgb(153, 204, 255);
+		}
+		p {
+			margin: 10px;
+			padding: 10px;
+			background-color: rgb(255, 255, 204);
+		}
+		li {
+			margin: 10px;
+			padding: 10px;
+			background-color: rgb(255, 255, 204);
+		}
+		.head {
+			width: 100%;
+			padding: 2%;
+			padding-bottom: 10%;
+		}
+		.output {
+			padding: 20px;
+		}
+		.output .chip {
+			color: white;
+		}
+		a:hover {
+			color: violet;
+		}
+		a:visited {
+			color: red;
+		}
+		.details {
+			margin: 10px;
+			padding: 10px;
+		}
+		h6 {
+			margin: 10px;
+		}
+	</style>
+
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/js/materialize.min.js"></script>
+	<script src="https://code.highcharts.com/highcharts.js"></script>
+	<script type="text/javascript">
+		var n_requests = 1;
+		var requests   = [];
+		function S(id){
+			return document.getElementById(id)
+		}
+		function put_requests(){
+			$('.requests').html('');
+			for(var i=0; i<n_requests; i++){
+				var p = '<div class="input-field col s2"> <input class="validate" type="text" id="r'+i+'"/> <label for="head_pos">Page Number</label> </div>';
+				$('.requests').append(p);
+			}
+		}
+		function add_request(){
+			$('#n_requests').html(++n_requests);
+			put_requests();
+		}
+		function remove_request(){
+			if(n_requests == 1)
+				return;
+			$('#n_requests').html(--n_requests);
+			put_requests();
+		}
+		function submit(){
+			requests = [];
+			var input = S('n_frames').value + ' ' + n_requests + ' ';
+			if(parseInt(S('n_frames').value) <= 0)
+			{
+				alert("invalid input");
+				return;
+			}
+			for(var i=0; i<n_requests; i++){
+				var pawan = S('r'+i).value;
+				if (parseInt(pawan)< 0)
+				{
+					alert("Invalid input");
+					return;
+				}
+				requests.push(S('r'+i).value);
+				input += S('r'+i).value + ' ';
+			}
+			execute(input);
+		}
+		function execute(input){
+			var xhr = new XMLHttpRequest();
+			xhr.onreadystatechange = function() {
+			    if (xhr.readyState == XMLHttpRequest.DONE) {
+			    	output = xhr.responseText;
+			    	output = output.split('\n')
+			    	output = output.slice(0, output.length-1);
+			    	handle_output(output);
+					window.scrollTo(0,document.body.scrollHeight);
+			    }
+			}
+			xhr.open('GET', '/page_replacement/execute?input='+input, true);
+			xhr.send();
+		}
+		algo = ['FIFO', 'LRU', 'Optimal']
+		function handle_output(){
+			hits = [];
+			console.log(output);
+			$('.output').html('');
+			for(var i=0; i<output.length; i++){
+				var o = output[i].split(' ');
+				var d = '<div class="row"><div class="col s2 right-align">' + algo[i] + '</div><div class="col s10">';
+				for(var j=0; j<n_requests; j++)
+					d += '<div class="col chip ' + ((o[j]=='1')? 'green' : 'red') + '">' + requests[j] + '</div>';
+				d += '</div>'
+				$('.output').append(d);
+				hits.push(parseFloat(o[o.length-1]));
+			}
+			draw_graph(hits, algo);
+		}
+		function draw_graph(hits, algos){
+			console.log(hits);
+			$('body').append('<div class="container"><div class="card"><div class="card-content"><div id="chart-container"></div></div></div</div>');
+			var chart = {
+			  type: 'bar'
+			};
+			var title = {
+			  text: 'Comparision of Page Replacement Algorithms'   
+			};
+			var xAxis = {
+			  categories: algos,
+			  title: {
+			     text: null
+			  }
+			};
+			var yAxis = {
+			  min: 0,
+			  title: {
+			     text: 'Percentage',
+			     align: 'high'
+			  },
+			  labels: {
+			     overflow: 'justify'
+			  }
+			};
+			var tooltip = {
+			  // valueSuffix: ' millions'
+			};
+			var plotOptions = {
+			  bar: {
+			     dataLabels: {
+			        enabled: true
+			     }
+			  }
+			};
+			var legend = {
+			  layout: 'vertical',
+			  align: 'right',
+			  verticalAlign: 'top',
+			  x: -40,
+			  y: 100,
+			  floating: true,
+			  borderWidth: 1,
+			  backgroundColor: ((Highcharts.theme && Highcharts.theme.legendBackgroundColor) || '#FFFFFF'),
+			  shadow: true
+			};
+			var credits = {
+			  enabled: false
+			};
+			var series= [{
+			     name: 'Hit Ratio',
+			        data: hits
+			    }
+			];     
+			  
+			var json = {};   
+			json.chart = chart; 
+			json.title = title;   
+			json.tooltip = tooltip;
+			json.xAxis = xAxis;
+			json.yAxis = yAxis;  
+			json.series = series;
+			json.plotOptions = plotOptions;
+			json.legend = legend;
+			json.credits = credits;
+			$('#chart-container').highcharts(json);
+		}
+	</script>
+
+</head>
+
+<body>
+
+	<div class="head teal white-text" style="background-color: rgb(51, 51, 255);"><h1 style="color: black; font-family: Times New Roman, Times, serif;">Operating System | Page Replacement Algorithms</h1></div>
+	
+	<div class="container" style="margin-top : -8%;">	
+		<div class="card" >
+			<div class="card-content">
+				<div class="row">
+					<h3 style="font-family: Times New Roman, Times, serif;">Page Replacement Algorithms | About</h3>
+					<p style="font-size: 19px;" class="details">In an operating systems that use paging for memory management, <b>page replacement algorithms</b> are needed to decide which page needed to be replaced when new page comes in. Whenever a new page is referred and not present in memory, page fault occurs and Operating System replaces one of the existing pages with newly needed page. Different page replacement algorithms suggest different ways to decide which page to replace. The target for all algorithms is to reduce number of page faults.
+					<p style="font-size: 19px;" class="details"><b>Page Fault - </b>A page fault is a type of interrupt, raised by the hardware when a running program accesses a memory page that is mapped into the virtual address space, but not loaded in physical memory.</p>
+					</p>
+					<h4 style="font-family: Times New Roman, Times, serif;">Page Replacement Algorithms : </h4>
+
+					<ol >
+					  <li style="font-size: 19px;"><b>First In First Out(FIFO) : </b>This is the simplest page replacement algorithm. In this algorithm, operating system keeps track of all pages in the memory in a queue, oldest page is in the front of the queue. When a page needs to be replaced page in the front of the queue is selected for removal.</li>
+					  <li style="font-size: 19px;"><b>Optimal Page Replacement - </b>In this algorithm, pages are replaced which are not used for the longest duration of time in the future.</li>
+					  <li style="font-size: 19px;"><b>Least Recently Used(LRU) - </b>In this algorithm page will be replaced which is least recently used.</li>
+					</ol>
+					<h6 style="font-size: 17px; ">more about page replacement algorithms!! &nbsp;<a href="https://www.geeksforgeeks.org/operating-system-page-replacement-algorithm/">click here.</a></h6>
+					<h6 style="font-size: 17px; ">what is paging?? &nbsp;<a href="https://www.geeksforgeeks.org/operating-system-paging/">click here.</a></h6>
+				</div>
+			</div>
+		</div>			
+
+		<div class="card" >
+			<div class="card-content">
+				<div class="row">
+					<h3>Page Replacement Algorithms - Simulation</h3>
+				</div>
+				<div class="row">
+					<div class="col s4">
+						<div class="input-field">
+							<input class="validate" type="text" id="n_frames"/>
+							<label for="head_pos">Number of Frames</label>
+						</div>
+					</div>
+					<a class="btn waves-effect waves-effect-light teal right" onclick="submit()"><i class="material-icons right">send</i>Submit</a>
+					<div class="col s12">
+						<div class="col"><b>Requests</b></div>
+						<div class="row">
+							<a class="col btn btn-small" href="javascript:remove_request()">-</a></a>
+							<div class="col" id="n_requests">1</div>
+							<a class="col btn btn-small" href="javascript:add_request()">+</a></a>
+						</div>
+					</div>
+				</div>
+				<div class="row requests">
+					<div class="input-field col s2">
+						<input class="validate" type="text" id="r0"/>
+						<label for="head_pos">Page Number</label>
+					</div>
+				</div>
+			</div>
+			<div class="output"></div>
+		</div>
+	</div>
+
+</body>
+</html>

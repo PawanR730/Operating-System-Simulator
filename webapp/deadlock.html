@@ -1,0 +1,192 @@
+<!-- Rishika Narayanan -->
+<!-- 16CO241             -->
+<!-- 4/2/18              -->
+<!DOCTYPE html>
+<html>
+<head>
+	<title>OS Simulator - Dead Lock</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width; initial-scale=1; maximum-scale=1">
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<script
+	src="https://code.jquery.com/jquery-3.1.1.min.js"
+	integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
+	crossorigin="anonymous"></script>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/css/materialize.min.css">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto Mono">
+	<style>
+		.new{
+			font: impact;
+		}
+		body {
+			margin: 0;
+			padding: 0;
+			background: white;
+		}
+		.head {
+			width: 100%;
+			padding: 0.2%;
+			padding-bottom: 0.2%;
+			padding-top: 0.2%;
+		}
+		.max {
+			border-left:    1px solid #ddd;
+			border-right:   1px solid #ddd;
+		}
+		p{
+		text-align: left;
+		font-size: 20px;
+		font-family: Times New Roman;
+		}
+	</style>
+
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/js/materialize.min.js"></script>
+	<script src="https://code.highcharts.com/highcharts.js"></script>
+	<script type="text/javascript">
+		var n_procs = 0, n_res = 0;
+		function S(id){
+			return document.getElementById(id)
+		}
+		function put_matrix(container, n, m){
+			var matrix = '<table><tbody>';
+			for(var i=0;i<n;i++){
+				matrix += '<tr>';
+				for(var j=0;j<m;j++)
+					matrix += '<td> <div class="input-field"> <input class="validate" type="text" id="' + container + '_' + i + '_' + j + '"/> </div> </td>';
+				matrix += '<tr>'
+			}
+			matrix += '</tbody></table>';
+			return matrix;
+		}
+		function get_matrix(container, n, m){
+			var matrix = '';
+			for(var i=0;i<n;i++)
+				for(var j=0;j<m;j++)
+					matrix += S(container+'_'+i+'_'+j).value + ' ';
+			return matrix;
+		}
+		function next(){
+			n_procs = S('n_procs').value,
+			n_res   = S('n_res').value;
+			if(n_procs.lenght==0 || n_res.lenght == 0){
+				Materialize.toast("Input fields are empty!", 1500);
+				return;
+			}
+			if(!n_procs || !n_res){
+				Materialize.toast("Input fields are empty!", 1500);
+				return;
+			}
+			$('.allocation').html("Allocation Matrix" + put_matrix('allocation', n_procs, n_res));
+			$('.max').html("Max Matrix" + put_matrix('max', n_procs, n_res));
+			$('.available').html("Available Vector" + put_matrix('available', 1, n_res));
+		}
+		function submit(i){
+			if(i==0){
+				if(n_procs+n_res == 0){
+					Materialize.toast("Input fields are empty!", 1500);
+					return;
+				}
+				var input = n_procs + ' ' + n_res + ' ';
+				input += get_matrix('allocation', n_procs, n_res);
+				input += get_matrix('max', n_procs, n_res);
+				input += get_matrix('available', 1, n_procs);
+				console.log(input);
+				execute(input);
+			}else {
+				var p = S('proc_n').value;
+				var input = p + ' ' + get_matrix('resourse-request', 1, n_res);
+				console.log(input);
+				execute(input);
+			}
+		}
+		function execute(input){
+			var xhr = new XMLHttpRequest();
+			xhr.onreadystatechange = function() {
+			    if (xhr.readyState == XMLHttpRequest.DONE) {
+			    	output = xhr.responseText;
+			    	console.log(output);
+			    	process(output);
+					window.scrollTo(0,document.body.scrollHeight);
+			    }
+			}
+			xhr.open('GET', '/banker/execute?input='+input, true);
+			xhr.send();
+		}
+		function process(output){
+			if(output[0] == 'S'){
+				$('.output').html('<div class="row green-text"><div class="col s12">' + output + '<i class="material-icons right">lock_open</i></div></div>');
+				if(!($('.resourse-request').html()) || $('.resourse-request').html().lenght == 0){
+					$('.resourse-request').append('<div class="row"> <div class="input-field col s4"> <input class="validate" type="text" id="proc_n"/> <label for="head_pos">Process Number</label> </div> </div>');
+					$('.resourse-request').append('<div class="row"> <div class="col s12">Request Vector' + put_matrix('resourse-request', 1, n_res) + '</div> </div>');
+					$('.submit').attr('onclick', 'submit(1)')
+				}
+			}else if(output[0] == 'D'){
+				$('.output').html('<div class="row red-text"><div class="col s12">' + output + '<i class="material-icons right">lock_outline</i></div></div>');
+			}else {
+				$('output').addClass('red-text');
+				$('.output').html('<div class="row red-text"><div class="col s12">' + output + '<i class="material-icons right">info</i></div></div>');
+			}
+		}
+	</script>
+
+</head>
+<body>
+
+	<div class="head black white-text" ><h1><marquee direction="right"><center>Deadlock</center> </h1></marquee></div>
+</body>
+<br>
+<br>
+		<div >
+			<div>
+			   <h2 style="text-align:center; font-family: Arial Bold">Introduction to DeadLock</h2>
+			   <p class="new">Deadlock happens when there exists a set of processes that are blocked due to each of the process holding onto a resource and waiting for another resource obtained by some other process.  
+			   Deadlock arises if the conditions mentioned below take place simultaneously.
+			   <ul>
+			   	<li>-<strong>Mutual Exclusion</strong>: One or more resources are not sharable.</li>
+				<li>-<strong>Hold and Wait</strong>: Process is holding onto at least a resource while waiting for another resource.</li>
+				<li>-<strong>No Preemption</strong>: A process can only obtain a resource when the other process has completed using it and until this process releases it.</li>
+				<li>-<strong>Circular Wait</strong>: The process are waiting for each other in a technical form.</li>
+			</ul>
+			<p> If one of the four conditions are not satisfied, <b>DeadLock</b> can be avoided.</p>
+				<img src = "https://www.geeksforgeeks.org/wp-content/uploads/gq/2015/06/deadlock.png" align="right"/>
+ 				</p>
+			   <hr>
+				<h3>Deadlock Simulation</h3>
+				<div class="row">
+					<div class="input-field col s4">
+						<input class="validate" type="text" id="n_procs"/>
+						<label for="head_pos">Number of Processes</label>
+					</div>
+					<div class="input-field col s4">
+						<input class="validate" type="text" id="n_res"/>
+						<label for="head_pos">Number of Resources</label>
+					</div>
+					<div class="col s3" style="padding-top: 20px;">
+						<a class="black btn waves-effect waves-light white-text" href="javascript: next()">
+							<i class="material-icons right">
+							keyboard_arrow_right</i>Next
+						</a>
+					</div>
+				</div>
+
+				<div class="row input-matrix-container">
+					<div class="col s4 allocation"></div>
+					<div class="col s4 max"></div>
+					<div class="col s4 available"></div>
+				</div>
+
+				<div class="row output"></div>
+
+				<div class="row resourse-request"></div>
+
+				<div class="row">
+					<a class="black btn waves-effect waves-effect-light center submit" onclick="submit(0)"><i class="material-icons right">send</i>Submit</a>
+				</div>
+
+			</div>
+		</div>
+	</div>
+
+</body>
+</html>
